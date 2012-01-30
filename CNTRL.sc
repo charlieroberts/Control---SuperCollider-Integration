@@ -38,17 +38,41 @@ CNTRL : Object {
 		oscout.sendMsg(address, value);
 	}
 
-	*button {arg args;
-		var w;
-		if(args == nil, { args = (); });
-		args.put(\type, "Button");
+	*button {arg ... args;
+		var w, args_;
+		
+		case
+		{ args[0] == nil} { args_ = (); }
+		{ args[0].class.asString == "Symbol"} {
+			if(args[2] == nil,
+				{ args_ = (); },
+				{ args_ = args[2]; }
+			);
+
+			args_.put(\param, args[0]); args_.put(\synth, args[1]); 
+		}
+		{ args[0].class.asString == "Event"} { args_ = args[0] };
+		
+		args_.put(\type, "Button");
 				
-		^w = this.make(args);		
+		^w = this.make(args_);		
 	}
 	
 	*knob { arg args;
 		var w;
-		if(args == nil, { args = (); });
+		
+		case
+		{ args[0] == nil} { args_ = (); }
+		{ args[0].class.asString == "Symbol"} {
+			if(args[2] == nil,
+				{ args_ = (); },
+				{ args_ = args[2]; }
+			);
+
+			args_.put(\param, args[0]); args_.put(\synth, args[1]); 
+		}
+		{ args[0].class.asString == "Event"} { args_ = args[0] };
+		
 		args.put(\type, "Knob");
 		
 		^w = this.make(args);
@@ -56,7 +80,19 @@ CNTRL : Object {
 	
 	*slider { arg args;
 		var w;
-		if(args == nil, { args = (); });
+		case
+		
+		{ args[0] == nil} { args_ = (); }
+		{ args[0].class.asString == "Symbol"} {
+			if(args[2] == nil,
+				{ args_ = (); },
+				{ args_ = args[2]; }
+			);
+
+			args_.put(\param, args[0]); args_.put(\synth, args[1]); 
+		}
+		{ args[0].class.asString == "Event"} { args_ = args[0] };
+		
 		args.put(\type, "Slider");
 		
 		^w = this.make(args);
@@ -65,7 +101,7 @@ CNTRL : Object {
 }
 
 CNTRLWidget : Object {
-	var <>master, attributes, <callback, <type, <name, <value, <values, <oscnode;
+	var <>master, attributes, <callback, <type, <name, <value, <values, <oscnode, <param, <synth;
 	
 	*new { arg master, attributes;
 		attributes.postln;
@@ -80,7 +116,10 @@ CNTRLWidget : Object {
 		
 		attributes.keys.do({arg key, i;
 			key.postln;
-			if(key != 'callback', {
+			
+			if((key != 'callback') && (key != \synth) && (key != 'param'), {
+				if(i != 0, { json = json ++ ", "; } );
+				
 				json = json ++ "'" ++ key ++ "':";
 			
 				if(attributes[key].class.asString == "String", 
@@ -88,7 +127,6 @@ CNTRLWidget : Object {
 					{ json = json ++ attributes[key] }
 				);
 			
-				if(i + 1 != attributes.size, { json = json ++ ", "; } );
 			});
 		});
 
@@ -97,7 +135,13 @@ CNTRLWidget : Object {
 
 		master.sendOSC("/control/addWidget", json);
 		callback = attributes[\callback];
-
+		param = attributes[\param];
+		synth = attributes[\synth];
+		
+		if(param != nil && synth != nil,
+			{callback = { arg widget; synth.set(param, widget.value); } }
+		);
+		
 		if(callback == nil, 
 			{ 
 				oscCallback =  { arg time, responder, msg; value = msg[1]; } 
