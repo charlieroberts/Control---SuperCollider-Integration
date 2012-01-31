@@ -24,5 +24,8 @@ x = SynthDef("help-synth", {| freq = 440, vol = 1 |
 }).play;
 
 // specify parameter and synth
-e = CNTRL.slider( \vol,  x);
+e = CNTRL.button( \vol,  x);
 f = CNTRL.slider( \freq, x, (min:440, max:880) );
+
+// remove widget
+e.remove;

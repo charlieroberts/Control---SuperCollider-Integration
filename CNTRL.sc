@@ -58,9 +58,9 @@ CNTRL : Object {
 		^w = this.make(args_);		
 	}
 	
-	*knob { arg args;
-		var w;
-		
+	*knob { arg ... args;
+		var w, args_;
+				
 		case
 		{ args[0] == nil} { args_ = (); }
 		{ args[0].class.asString == "Symbol"} {
@@ -73,13 +73,13 @@ CNTRL : Object {
 		}
 		{ args[0].class.asString == "Event"} { args_ = args[0] };
 		
-		args.put(\type, "Knob");
+		args_.put(\type, "Knob");
 		
-		^w = this.make(args);
+		^w = this.make(args_);
 	}
 	
-	*slider { arg args;
-		var w;
+	*slider { arg ... args;
+		var w, args_;
 		case
 		
 		{ args[0] == nil} { args_ = (); }
@@ -93,9 +93,9 @@ CNTRL : Object {
 		}
 		{ args[0].class.asString == "Event"} { args_ = args[0] };
 		
-		args.put(\type, "Slider");
+		args_.put(\type, "Slider");
 		
-		^w = this.make(args);
+		^w = this.make(args_);
 	}
 	
 }
@@ -109,16 +109,19 @@ CNTRLWidget : Object {
 	}
 	
 	init {
-		var json = "{", oscCallback;
+		var json = "{", oscCallback, needsComma;
 		
 		name = attributes[\name];
 		type = attributes[\name];
 		
+		needsComma = 0;
+		
 		attributes.keys.do({arg key, i;
-			key.postln;
 			
 			if((key != 'callback') && (key != \synth) && (key != 'param'), {
-				if(i != 0, { json = json ++ ", "; } );
+				key.postln;
+				
+				if(needsComma == 1, { json = json ++ ", "; } );
 				
 				json = json ++ "'" ++ key ++ "':";
 			
@@ -126,19 +129,22 @@ CNTRLWidget : Object {
 					{ json = json ++ "'" ++ attributes[key] ++ "'" },
 					{ json = json ++ attributes[key] }
 				);
-			
+				needsComma = 1;
 			});
 		});
 
 		json = json ++ "}";
-		json.postln;
-
+		
 		master.sendOSC("/control/addWidget", json);
 		callback = attributes[\callback];
+
 		param = attributes[\param];
 		synth = attributes[\synth];
+
+		value = -100;
+		callback.value(this);
 		
-		if(param != nil && synth != nil,
+		if( (param != nil) && (synth != nil),
 			{callback = { arg widget; synth.set(param, widget.value); } }
 		);
 		
